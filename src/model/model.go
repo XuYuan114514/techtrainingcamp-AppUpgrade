@@ -1,5 +1,11 @@
 package model
 
+import (
+	"strconv"
+	"strings"
+	"sync"
+)
+
 type Rule struct {
 	// rule condition
 	Platform string `json:"platform"`
@@ -32,6 +38,16 @@ type CReport struct {
 	CpuArch int `json:"cpu_arch"`
 }
 
+type CacheMessage struct {
+	// message return ro App
+	RuleId int
+	DownloadUrl string `json:"download_url"`
+	UpdateVersionCode string `json:"update_version_code"`
+	Md5 string `json:"md5"`
+	Title string `json:"title"`
+	UpdateTips string `json:"update_tips"`
+}
+
 type RMessage struct {
 	// message return ro App
 	DownloadUrl string `json:"download_url"`
@@ -41,6 +57,39 @@ type RMessage struct {
 	UpdateTips string `json:"update_tips"`
 }
 
+var (
+	MySQLRWMutex *sync.RWMutex
+	//DB *sql.DB
+	//redis
+)
+
+func InitAll(){
+	MySQLRWMutex = new(sync.RWMutex)
+	// DB = initDatabase()
+	// redis = initCache()
+
+}
+
+func initDatabase() interface{}{
+	// 使用mysql连接池实现
+	return nil
+}
+
+func initCache(){
+	//连接redis
+	//缓存预热
+}
+
 func VersionToInt64(version string) int64{
-	return 0
+	var res  int64 = 0
+	versionSlices := strings.Split(version,".")
+	bitMoves := [4]int{48,32,16,0}
+	for i,v := range versionSlices{
+		j,err := strconv.Atoi(v)
+		if err != nil{
+			panic(err)
+		}
+		res |= int64(j)<< bitMoves[i]
+	}
+	return res
 }

@@ -2,10 +2,10 @@ package update_service
 
 import (
 	"GaryReleaseProject/src/cache"
+	"GaryReleaseProject/src/database"
 	"GaryReleaseProject/src/model"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cast"
-
 )
 
 
@@ -15,7 +15,7 @@ func Pong(c *gin.Context) {
 }
 
 
-func DealCRport(c *gin.Context) {
+func DealCReport(c *gin.Context) {
 
 	cr:= model.CReport{
 		DevicePlatform : c.Query("device_platform"),
@@ -27,7 +27,12 @@ func DealCRport(c *gin.Context) {
 		CpuArch : cast.ToInt(c.Query("cpu_arch")),
 	}
 
-	rm := cache.MatchRule(&cr)
-	c.JSON(200,*rm)
+	model.MySQLRWMutex.RLock()
+
+	cacheMessage,_ := database.MatchRules(&cr)
+	returnMessage,_ := cache.MatchWhitelist(cacheMessage)
+
+	defer c.JSON(200,returnMessage)
+	defer model.MySQLRWMutex.RUnlock()
 }
 
