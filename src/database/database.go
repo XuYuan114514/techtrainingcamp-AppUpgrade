@@ -21,7 +21,7 @@ func ModifyRule(ruleId int,status int)error{
 	return nil
 }
 
-func MatchRules(cr *model.CReport) ([]*model.CacheMessage,error){
+func MatchRules(cr *model.CReport) (*[]*model.CacheMessage,error){
 	// 查询其他规则表中所有匹配的rule
 	// 要求返回的切片中ruleid对应规则按照UpdateVersionCodeInt64降序排列
 
