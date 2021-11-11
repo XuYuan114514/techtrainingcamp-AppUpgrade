@@ -18,7 +18,7 @@ func InsertRule(rule model.Rule) error {
 		"max_update_version_code, min_update_version_code, max_os_api, min_os_api,"+
 		"cpu_arch, channel, title, update_tips,"+
 		"update_version_code_int64, max_update_version_code_int64, min_update_version_code_int64, rule_status)VALUES("+
-		"?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		"?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		rule.Platform, rule.DownloadUrl, rule.UpdateVersionCode, rule.MD5,
 		rule.MaxUpdateVersionCode, rule.MinUpdateVersionCode, rule.MaxOsApi, rule.MinOsApi,
 		rule.CpuArch, rule.Channel, rule.Title, rule.UpdateTips,
@@ -34,7 +34,7 @@ func InsertRule(rule model.Rule) error {
 	fmt.Println("insert to config table succeed!", lastId)
 
 	//白名单单独插入white_lists表,同样不带rule_id,使用自增id
-	result, err = model.DB.Exec("INSERT INTO white_list("+
+	result, err = model.DB.Exec("INSERT INTO white_lists("+
 		"device_id_list)VALUES(?)", rule.DeviceIdList)
 	if err != nil {
 		fmt.Println("insert to config table failed!", err)

@@ -121,6 +121,8 @@ func MatchWhitelist(candidates *[]model.CacheMessage,deviceId string)(pos int,er
 				return i,nil
 			} else if dealDone == 2{
 				continue
+			}else if dealDone == -1{
+				return -1,nil
 			}
 		default:
 			return -1,fmt.Errorf("redis lua返回异常结果")
@@ -139,6 +141,7 @@ func dealMissWhitelist(ruleId string,deviceId string,rc *redis.Conn,lua *redis.S
 		3：ruleId不在缓存中
 
 		本函数返回
+		-1: 数据库中没有对应白名单，失败
 		0：拿锁失败，继续等待
 		1：不用拿锁，ruleId在缓存且deviceId命中,可以返回了 || 拿到锁，写入缓存，命中
 		2：不用拿锁，ruleId在缓存里且deviceId未命中，可以continue || 拿到锁，写入缓存，未命中
@@ -167,13 +170,16 @@ func tryPullCache(ruleId string,deviceId string, rcc *redis.Conn)(int,error){
 	in,_ := rc.Do("set","mutex:"+ruleId,deviceId,"ex",setnxHoldTime,"nx")
 	if in == 1{
 		// 拿到锁了，开始写缓存
+		luaDel := redis.NewScript(1,SAFT_DEL_MUTEX)
+		defer luaDel.Do(rc, "mutex:"+ruleId,deviceId)
 		whiteList,_ := database.GetWhitelist(ruleId)
+		if whiteList == ""{
+			return -1,nil
+		}
 		// lua保证写入之后立刻判断
 		luaPull := redis.NewScript(3,CACHE_AND_SEARCH)
 		status,_ :=redis.Int(luaPull.Do(rc,"ruleId:"+ruleId,deviceId,",",whiteList))
 		// lua防止进程超时之后误删锁
-		luaDel := redis.NewScript(1,SAFT_DEL_MUTEX)
-		luaDel.Do(rc, "mutex:"+ruleId,deviceId)
 		return status,nil
 	}else{
 		// 拿锁失败, 继续等待

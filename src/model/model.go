@@ -80,11 +80,11 @@ var(
 
 func InitAll(){
 	MySQLRWMutex = new(sync.RWMutex)
-	DB = initDatabase()
-	RedisClient,_ = initCache()
+	DB = InitDatabase()
+	RedisClient,_ = InitCache()
 }
 
-func initDatabase() *sql.DB {
+func InitDatabase() *sql.DB {
 	// 使用mysql连接池实现
 	//"用户名：密码@[连接方式](主机名：端口号）/数据库名”
 	db, err := sql.Open("mysql", DataSourceName)
@@ -156,7 +156,7 @@ func CreateTable(db *sql.DB) {
 	}
 }
 
-func initCache()(*redis.Pool, error){
+func InitCache()(*redis.Pool, error){
 	rc := &redis.Pool{
 		MaxIdle:     MaxIdle,
 		MaxActive:   MaxActive,
