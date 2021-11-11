@@ -9,7 +9,6 @@ import (
 )
 
 func TestDeploy(t *testing.T){
-
 	r := gin.Default()
 	r.GET("/ping", update_service.Pong)
 	r.GET("/deploy", deployRule)

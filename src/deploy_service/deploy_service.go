@@ -34,18 +34,11 @@ func DeployRule(c *gin.Context) {
 	//根据rule_status来决定是插入数据库还是修改数据库
 	if rule.RuleStatus == 0 {
 		_ = database.InsertRule(rule)
+		c.JSON(200, gin.H{"message": "Insert Rule"})
 	} else {
 		_ = database.ModifyRule(RuleId, rule.RuleStatus)
+		c.JSON(200, gin.H{"message": "Modify Rule"})
 	}
 
-	/*
-		rule status = 0
-		UpdateVersionCodeInt64 = model.VersionToInt64( )
-		...
-	*/
-
-	// 根据情况调用pkg database中的插入规则还是修改规则函数
-	//database.InsertRule()
-	//database.ModifyRule()
 }
 

@@ -31,7 +31,8 @@ type Rule struct {
 	UpdateVersionCodeInt64    int64
 	MaxUpdateVersionCodeInt64 int64
 	MinUpdateVersionCodeInt64 int64
-	RuleStatus                int `json:"rule_status"` //需要传入
+	//需要传入，0是正常，1是暂停，2是下线
+	RuleStatus                int `json:"rule_status"`
 }
 
 type CReport struct {
@@ -176,6 +177,9 @@ func InitCache()(*redis.Pool, error){
 }
 
 func VersionToInt64(version string) int64{
+	if version ==""{
+		return -1
+	}
 	var res  int64 = 0
 	versionSlices := strings.Split(version,".")
 	bitMoves := [4]int{48,32,16,0}
@@ -190,6 +194,9 @@ func VersionToInt64(version string) int64{
 }
 
 func Str2Int(str string) int {
+	if str ==""{
+		return -1
+	}
 	res, err := strconv.Atoi(str)
 	if err != nil {
 		panic(err)
