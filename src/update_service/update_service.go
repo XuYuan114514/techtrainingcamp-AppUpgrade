@@ -26,13 +26,22 @@ func DealCReport(c *gin.Context) {
 		UpdateVersionCode : c.Query("update_version_code"),
 		CpuArch : cast.ToInt(c.Query("cpu_arch")),
 	}
-
 	model.MySQLRWMutex.RLock()
-
+	// go有类似shared_ptr，结束了有人用也不回收，变量逃逸分析
 	cacheMessage,_ := database.MatchRules(&cr)
-	returnMessage,_ := cache.MatchWhitelist(cacheMessage)
+	pos,_ := cache.MatchWhitelist(cacheMessage,cr.DeviceId)
 
-	defer c.JSON(200,returnMessage)
-	defer model.MySQLRWMutex.RUnlock()
+	model.MySQLRWMutex.RUnlock()
+	if pos == -1{
+		c.JSON(200,"")
+	}else{
+		c.JSON(200,gin.H{
+			"download_url": (*cacheMessage)[pos].DownloadUrl,
+			"update_version_code":(*cacheMessage)[pos].UpdateVersionCode,
+			"md5":(*cacheMessage)[pos].Md5,
+			"title":(*cacheMessage)[pos].Title,
+			"update_tips":(*cacheMessage)[pos].UpdateTips,
+			})
+	}
 }
 

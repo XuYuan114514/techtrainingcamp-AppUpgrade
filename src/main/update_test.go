@@ -32,3 +32,5 @@ func TestUpdateService(t *testing.T) {
     assert.Equal(t, http.StatusOK, w.Code)
     assert.Equal(t, "{\"download_url\":\"nil\",\"update_version_code\":\"\",\"md5\":\"\",\"title\":\"\",\"update_tips\":\"\"}", w.Body.String())
 }
+
+
