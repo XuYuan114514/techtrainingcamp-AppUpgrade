@@ -1,6 +1,7 @@
 package main
 
 import (
+	"GaryReleaseProject/src/cache"
 	"GaryReleaseProject/src/deploy_service"
 	"GaryReleaseProject/src/model"
 	"GaryReleaseProject/src/update_service"
@@ -9,6 +10,7 @@ import (
 
 func customizeouter(r *gin.Engine) {
 	model.InitAll()
+	cache.WarmUpCache()
 	r.GET("/ping", update_service.Pong)
 	r.GET("/update", update_service.DealCReport)
 

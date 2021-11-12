@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -19,8 +20,7 @@ if ruleExist == 0
 then
     return 3
 else
-	if redis.call('sismember',KEYS[1],ARGV[1]) == 1
-	then
+	if redis.call('sismember',KEYS[1],ARGV[1]) == 1 then
 		return 1
 	else
 		return 2
@@ -68,7 +68,7 @@ const(
 		redis.call("sadd",KEYS[1],str)
         --arr[n] = str
     end
-	
+	redis.call("expire",KEYS[1],600)
 	if redis.call("sismember",KEYS[1],KEYS[2]) == 1 then 
 		return 1
 	else 
@@ -80,7 +80,26 @@ const(
 var(
 	waitForSetnx = 2 * time.Second // 想要拉取的rule正在被别人拉取时，一次睡眠等待的时间
 	setnxHoldTime = "100" // 分布锁失效时间
+	warmupCacheNums = 10
 )
+
+func WarmUpCache(){
+	ruleIds := database.GetNIds(warmupCacheNums)
+	rc := model.RedisClient.Get()
+	defer rc.Close()
+	for i:=0;i < len(ruleIds);i++ {
+		rid := strconv.Itoa(ruleIds[i])
+		whiteList,_ := database.GetWhitelist(rid)
+		ids := strings.Split(whiteList, ",")
+		args := make([]interface{}, len(ids)+1)
+		args[0] = "ruleId:"+rid
+		for j,v := range ids{
+			args[j+1] = v
+		}
+		in,_ := rc.Do("sadd",args...)
+		fmt.Println(in)
+	}
+}
 
 func MatchWhitelist(candidates *[]model.CacheMessage,deviceId string)(pos int,err error){
 	// 拿到rule切片之后
@@ -168,7 +187,7 @@ func tryPullCache(ruleId string,deviceId string, rcc *redis.Conn)(int,error){
 	rc := *rcc
 	// setnx 分布锁
 	in,_ := rc.Do("set","mutex:"+ruleId,deviceId,"ex",setnxHoldTime,"nx")
-	if in == 1{
+	if in == "OK"{
 		// 拿到锁了，开始写缓存
 		luaDel := redis.NewScript(1,SAFT_DEL_MUTEX)
 		defer luaDel.Do(rc, "mutex:"+ruleId,deviceId)

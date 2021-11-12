@@ -2,6 +2,8 @@ package database
 
 import (
 	"GaryReleaseProject/src/model"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -76,16 +78,38 @@ func MatchRules(cr *model.CReport) (*[]model.CacheMessage, error) {
 	// 查询其他规则表中所有匹配的rule
 	// 要求返回的切片中rule_id对应规则按照UpdateVersionCodeInt64降序排列
 
-	rows, err := model.DB.Query("SELECT rule_id, download_url, update_version_code, md5, title, update_tips "+
-		"FROM config "+
-		"WHERE max_update_version_code_int64 >=  ? AND min_update_version_code_int64 <= ? "+
-		"AND platform = ? "+
-		"AND channel = ? "+
-		"AND max_os_api >= ? AND min_os_api <= ? "+
-		"AND cpu_arch = ? "+
-		"ORDER BY update_version_code_int64 DESC ",
-		model.VersionToInt64(cr.UpdateVersionCode), model.VersionToInt64(cr.UpdateVersionCode),
-		cr.DevicePlatform, cr.Channel, cr.OsApi, cr.OsApi, cr.CpuArch)
+	//根据设备平台情况选择相应的匹配方法
+	//Android平台带OsApi
+	sqlAndroid := "SELECT rule_id, download_url, update_version_code, md5, title, update_tips " +
+		"FROM config " +
+		"WHERE max_update_version_code_int64 >=  ? AND min_update_version_code_int64 <= ? " +
+		"AND platform = ? " +
+		"AND channel = ? " +
+		"AND max_os_api >= ? AND min_os_api <= ? " +
+		"AND cpu_arch = ? " +
+		"AND rule_status = 0 " +
+		"ORDER BY update_version_code_int64 DESC "
+	//ios平台不带OsApi
+	sqlIos := "SELECT rule_id, download_url, update_version_code, md5, title, update_tips " +
+		"FROM config " +
+		"WHERE max_update_version_code_int64 >=  ? AND min_update_version_code_int64 <= ? " +
+		"AND platform = ? " +
+		"AND channel = ? " +
+		"AND cpu_arch = ? " +
+		"AND rule_status = 0 " +
+		"ORDER BY update_version_code_int64 DESC "
+
+	var rows *sql.Rows
+	var err error
+	if cr.DevicePlatform == "Android" {
+		rows, err = model.DB.Query(sqlAndroid,
+			model.VersionToInt64(cr.UpdateVersionCode), model.VersionToInt64(cr.UpdateVersionCode),
+			cr.DevicePlatform, cr.Channel, cr.OsApi, cr.OsApi, cr.CpuArch)
+	} else {
+		rows, err = model.DB.Query(sqlIos,
+			model.VersionToInt64(cr.UpdateVersionCode), model.VersionToInt64(cr.UpdateVersionCode),
+			cr.DevicePlatform, cr.Channel, cr.CpuArch)
+	}
 	//关闭rows释放所持有的数据库链接
 	defer rows.Close()
 	if err != nil {
@@ -110,13 +134,24 @@ func MatchRules(cr *model.CReport) (*[]model.CacheMessage, error) {
 
 }
 
+// GetWhitelist 根据ruleid string读取mysql中的白名单
 func GetWhitelist(rid string) (string, error) {
 	id, err := strconv.Atoi(rid)
 	if err != nil {
 		fmt.Println("rule id error:", err)
 		return "", err
 	}
-	row := model.DB.QueryRow("SELECT device_id_list FROM white_list WHERE rule_id = ?", id)
+	//从主表config中检查规则状态
+	var status int
+	e := model.DB.QueryRow("SELECT rule_status FROM config WHERE rule_id = ?", id).Scan(&status)
+	if e != nil {
+		log.Fatalln(e)
+	}
+	if status != 0 {
+		return "", errors.New("rule paused of failed\n")
+	}
+	//正常规则则返回白名单
+	row := model.DB.QueryRow("SELECT device_id_list FROM white_lists WHERE rule_id = ?", id)
 	var result string
 	err = row.Scan(&result)
 	if err != nil {
@@ -124,4 +159,46 @@ func GetWhitelist(rid string) (string, error) {
 		return "", err
 	}
 	return result, nil
+}
+
+// GetNIds 获取n个最大的白名单rule_id
+func GetNIds(n int) []int {
+	rows, err := model.DB.Query("SELECT rule_id FROM config WHERE rule_status = 0 ORDER BY rule_id DESC")
+	if err != nil{
+		log.Fatalln(err)
+	}
+	defer rows.Close()
+	var result []int
+	counter := 0
+	for rows.Next(){
+		var id int
+		if err := rows.Scan(&id); err != nil{
+			log.Fatalln(err)
+		}
+		if counter < n{
+			result = append(result, id)
+			counter++
+		}else{
+			break
+		}
+	}
+	return result
+
+
+	/* 未考虑status
+	var count int
+	err := model.DB.QueryRow("SELECT COUNT(*) FROM white_lists").Scan(&count)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	if count < n {
+		n = count
+	}
+	//建表时，rule_id是从0自增的，假定不会更改白名单表，最后一个id为count-1
+	res := make([]int, n)
+	for i := range res {
+		res[i] = count - 1
+		count--
+	}
+	return res*/
 }

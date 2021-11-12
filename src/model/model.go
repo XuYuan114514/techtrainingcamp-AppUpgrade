@@ -114,7 +114,7 @@ func CloseDatabase(db *sql.DB) {
 func CreateTable(db *sql.DB) {
 
 	//创建其他规则表config
-	sql := "CREATE TABLE If Not Exists config(" +
+	sql := "CREATE TABLE IF NOT EXISTS config(" +
 		"platform					char(64)	NOT	NULL," +
 		"download_url				char(255)	NOT NULL," +
 		"update_version_code		char(64)	NOT NULL," +
@@ -122,8 +122,8 @@ func CreateTable(db *sql.DB) {
 		"rule_id		 			int		 	NOT NULL	AUTO_INCREMENT," + //字段更改，用rule_id查表white_lists得到白名单
 		"max_update_version_code	char(64)	NOT NULL," +
 		"min_update_version_code	char(64)	NOT NULL," +
-		"max_os_api					int			NOT NULL," +
-		"min_os_api					int			NOT NULL," +
+		"max_os_api					int			DEFAULT NULL," +
+		"min_os_api					int			DEFAULT NULL," +
 		"cpu_arch					int			NOT NULL," +
 		"channel					char(64)	NOT NULL," +
 		"title						char(255)	NOT NULL," +
